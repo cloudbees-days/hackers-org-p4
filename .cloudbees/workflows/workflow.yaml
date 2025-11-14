@@ -417,11 +417,15 @@ jobs:
           echo "✅ Deployment assets synced successfully"
           echo "Changelist: @745682"
           echo ""
-      - name: Puppet - Generate Deployment Manifests
+      - uses: cloudbees-days/setup-kubeconfig
+        name: Puppet - Initialize Kubernetes Provider
+        with:
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+      - name: Puppet - Generate and Apply Configuration
         uses: docker://alpine:latest
         run: |
           echo "═══════════════════════════════════════════════════"
-          echo "🎭 Puppet Enterprise - Manifest Generation"
+          echo "🎭 Puppet Enterprise - Deployment Orchestration"
           echo "═══════════════════════════════════════════════════"
           echo ""
           echo "Connecting to Puppet Server..."
@@ -455,12 +459,7 @@ jobs:
           echo "  Classes included: 6"
           echo "  Dependencies resolved: 18"
           echo ""
-      - uses: cloudbees-days/setup-kubeconfig
-        name: Set kubeconfig
-        with:
-          kubeconfig: ${{ secrets.KUBECONFIG }}
       - id: install-chart
-        name: Install helm chart
         uses: cloudbees-io/helm-install@v1
         with:
           chart-location: ${{ cloudbees.workspace }}/chart
@@ -474,20 +473,21 @@ jobs:
             useVPC: true
             fmInstance: demo1.cloudbees.io
             hostname: hackers-org-p4.hackers-org-p4-prod.preview.cb-demos.io
-      - name: Puppet - Apply Configuration
+      - name: Puppet - Apply Resources to Cluster
         uses: docker://alpine:latest
         run: |
-          echo "═══════════════════════════════════════════════════"
-          echo "🚀 Puppet Enterprise - Applying Configuration"
-          echo "═══════════════════════════════════════════════════"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 Puppet Agent - Applying Configuration"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           echo "Starting Puppet agent run..."
           echo "Agent version: 8.4.0"
           echo "Run mode: apply"
+          echo "Target: k8s-prod-cluster"
           echo ""
           sleep 1
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 Applying Resources"
+          echo "📦 Applying Kubernetes Resources via Puppet"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Namespace[hackers-org-p4-prod]"
@@ -495,11 +495,13 @@ jobs:
           echo ""
           sleep 2
           echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Deployment[hackers-organized]"
-          echo "  ✓ Updating deployment 'hackers-organized'"
+          echo "  ⟳ Updating deployment 'hackers-organized'"
           echo "    • Image: ${{ vars.DOCKER_USER }}/hackers-organized:${{ cloudbees.scm.sha }}"
           echo "    • Replicas: 3"
           echo "    • Strategy: RollingUpdate"
+          sleep 3
           echo "  ✓ Deployment updated successfully"
+          echo "  ✓ Pods rolling out: 3/3 ready"
           echo ""
           sleep 2
           echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Service[hackers-org-p4-service]"
@@ -535,20 +537,22 @@ jobs:
           echo "    Skipped:              0"
           echo ""
           echo "  Timing:"
-          echo "    Catalog application:  12.3s"
-          echo "    Total run time:       15.7s"
+          echo "    Catalog application:  14.8s"
+          echo "    Total run time:       18.2s"
           echo ""
           echo "  Changes:"
-          echo "    ✓ Deployment image updated"
+          echo "    ✓ Deployment image updated to ${{ cloudbees.scm.sha }}"
           echo "    ✓ Ingress rules synchronized"
           echo "    ✓ ConfigMap refreshed"
           echo "    ✓ Secrets updated"
+          echo "    ✓ Service endpoints verified"
+          echo "    ✓ All pods healthy and ready"
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           echo "✅ Puppet run completed successfully"
           echo ""
-          echo "Notice: Applied catalog in 12.3 seconds"
+          echo "Notice: Applied catalog in 14.8 seconds"
           echo ""
           echo "🔗 View run details: https://puppet.demo.cloudbees.io/nodes/k8s-prod-cluster/reports"
           echo ""
