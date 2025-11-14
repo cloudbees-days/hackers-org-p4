@@ -13,27 +13,6 @@ permissions:
 jobs:
   test:
     steps:
-      - name: Run Jenkins Job
-        kind: test
-        uses: cloudbees-io/jenkins-run-job@v2
-        continue-on-error: true
-        with:
-          url: ${{ vars.JENKINS_URL }}
-          username: ${{ secrets.JENKINS_USERNAME }}
-          token: ${{ secrets.JENKINS_TOKEN }}
-          job-name: ${{ vars.JENKINS_JOB }}
-      - name: Run GHA Workflow
-        kind: test
-        uses: cloudbees-io/ghactions-run-workflow@v2
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          org-name: cloudbees-days
-          repo-name: hackers-org-p4
-          branch-name: main
-          workflow-name: test-and-build-image
-          test-type: JUnit
-          test-result-location: junit.xml
       - name: Connect to Perforce Helix Core
         uses: docker://alpine:latest
         run: |
@@ -45,6 +24,7 @@ jobs:
           echo "P4USER: cloudbees-ci"
           echo "P4CLIENT: cloudbees-ci-workspace"
           echo ""
+          sleep 2
           echo "✓ Successfully connected to Perforce Helix Core"
           echo "✓ Server version: P4D/LINUX26X86_64/2023.1/2513900"
           echo "✓ Server uptime: 47 days, 13:42:18"
@@ -64,6 +44,7 @@ jobs:
           echo ""
           echo "Executing: p4 sync //depot/hackers-org-p4/main/...@latest"
           echo ""
+          sleep 1
           echo "//depot/hackers-org-p4/main/.eslintrc.json#12 - added as .eslintrc.json"
           echo "//depot/hackers-org-p4/main/.gitignore#8 - added as .gitignore"
           echo "//depot/hackers-org-p4/main/Dockerfile#15 - added as Dockerfile"
@@ -71,6 +52,7 @@ jobs:
           echo "//depot/hackers-org-p4/main/package.json#42 - added as package.json"
           echo "//depot/hackers-org-p4/main/package-lock.json#38 - added as package-lock.json"
           echo "//depot/hackers-org-p4/main/jest.config.js#7 - added as jest.config.js"
+          sleep 1
           echo "//depot/hackers-org-p4/main/chart/Chart.yaml#5 - added as chart/Chart.yaml"
           echo "//depot/hackers-org-p4/main/chart/values.yaml#11 - added as chart/values.yaml"
           echo "//depot/hackers-org-p4/main/src/index.js#56 - added as src/index.js"
@@ -79,6 +61,7 @@ jobs:
           echo "//depot/hackers-org-p4/main/src/middleware/auth.js#19 - added as src/middleware/auth.js"
           echo "//depot/hackers-org-p4/main/tests/unit/userController.test.js#22 - added as tests/unit/userController.test.js"
           echo ""
+          sleep 1
           echo "═══════════════════════════════════════════════════"
           echo "✅ Sync Summary"
           echo "═══════════════════════════════════════════════════"
@@ -132,6 +115,7 @@ jobs:
           echo "P4USER: cloudbees-ci"
           echo "P4CLIENT: cloudbees-ci-build-workspace"
           echo ""
+          sleep 2
           echo "✓ Successfully connected to Perforce Helix Core"
           echo "✓ Server version: P4D/LINUX26X86_64/2023.1/2513900"
           echo ""
@@ -148,6 +132,7 @@ jobs:
           echo ""
           echo "Executing: p4 sync //depot/hackers-org-p4/main/...@${{ cloudbees.scm.sha }}"
           echo ""
+          sleep 2
           echo "✅ Sync completed successfully"
           echo "Changelist: @745682"
           echo "Files synced: 147"
@@ -210,6 +195,7 @@ jobs:
           echo "P4USER: cloudbees-ci"
           echo "P4CLIENT: cloudbees-ci-scan-workspace"
           echo ""
+          sleep 2
           echo "✓ Successfully connected to Perforce Helix Core"
           echo ""
       - name: Checkout
@@ -223,6 +209,7 @@ jobs:
           echo ""
           echo "Executing: p4 sync //depot/hackers-org-p4/main/...@latest"
           echo ""
+          sleep 2
           echo "✅ Sync completed successfully"
           echo "Changelist: @745682"
           echo "Files synced: 147"
@@ -238,6 +225,7 @@ jobs:
           echo ""
           echo "Connecting to Klocwork Server..."
           echo "Server: klocwork.demo.cloudbees.io:8080"
+          sleep 2
           echo "✓ Connection established"
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -248,6 +236,7 @@ jobs:
           echo "Language: JavaScript/Node.js"
           echo "Build command: npm ci && npm run build"
           echo ""
+          sleep 2
           echo "✓ Build spec generated: kwinject.out"
           echo "  - Captured 147 source files"
           echo "  - Detected dependencies: 1,247 modules"
@@ -259,14 +248,17 @@ jobs:
           echo "Analysis started at: $(date '+%Y-%m-%d %H:%M:%S')"
           echo ""
           echo "Phase 1: Parsing source files..."
+          sleep 3
           echo "  [████████████████████████████████] 147/147 files"
           echo "  ✓ Parsing complete (3.2s)"
           echo ""
           echo "Phase 2: Building call graph..."
+          sleep 2
           echo "  [████████████████████████████████] 100%"
           echo "  ✓ Call graph complete (2.1s)"
           echo ""
           echo "Phase 3: Data flow analysis..."
+          sleep 3
           echo "  [████████████████████████████████] 100%"
           echo "  ✓ Data flow analysis complete (5.7s)"
           echo ""
@@ -279,6 +271,7 @@ jobs:
           echo "  • Authentication issues"
           echo "  • Memory safety"
           echo "  • Concurrency issues"
+          sleep 4
           echo "  [████████████████████████████████] 100%"
           echo "  ✓ Security analysis complete (8.4s)"
           echo ""
@@ -287,6 +280,7 @@ jobs:
           echo "  • Dead code detection"
           echo "  • Redundant code"
           echo "  • Best practice violations"
+          sleep 3
           echo "  [████████████████████████████████] 100%"
           echo "  ✓ Quality analysis complete (4.1s)"
           echo ""
@@ -350,6 +344,7 @@ jobs:
           echo "📄 Full report: https://klocwork.demo.cloudbees.io/review/project/hackers-org-p4"
           echo ""
           echo "Uploading results to Klocwork server..."
+          sleep 2
           echo "✓ Results uploaded successfully"
           echo ""
 
@@ -397,6 +392,7 @@ jobs:
           echo "P4USER: cloudbees-ci"
           echo "P4CLIENT: cloudbees-ci-deploy-workspace"
           echo ""
+          sleep 2
           echo "✓ Successfully connected to Perforce Helix Core"
           echo ""
       - name: Checkout
@@ -410,12 +406,14 @@ jobs:
           echo ""
           echo "Executing: p4 sync //depot/hackers-org-p4/main/chart/...@latest"
           echo ""
+          sleep 1
           echo "//depot/hackers-org-p4/main/chart/Chart.yaml#5 - synced"
           echo "//depot/hackers-org-p4/main/chart/values.yaml#11 - synced"
           echo "//depot/hackers-org-p4/main/chart/templates/deployment.yaml#8 - synced"
           echo "//depot/hackers-org-p4/main/chart/templates/service.yaml#4 - synced"
           echo "//depot/hackers-org-p4/main/chart/templates/ingress.yaml#6 - synced"
           echo ""
+          sleep 1
           echo "✅ Deployment assets synced successfully"
           echo "Changelist: @745682"
           echo ""
@@ -429,6 +427,7 @@ jobs:
           echo "Connecting to Puppet Server..."
           echo "Server: puppet.demo.cloudbees.io:8140"
           echo "Environment: production"
+          sleep 2
           echo "✓ Connected successfully"
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -441,6 +440,7 @@ jobs:
           echo ""
           echo "Compiling catalog for deployment..."
           echo ""
+          sleep 2
           echo "Resources to be managed:"
           echo "  • kubernetes::namespace[hackers-org-p4-prod]"
           echo "  • kubernetes::deployment[hackers-organized]"
@@ -449,6 +449,7 @@ jobs:
           echo "  • kubernetes::configmap[app-config]"
           echo "  • kubernetes::secret[app-secrets]"
           echo ""
+          sleep 2
           echo "✓ Catalog compiled successfully"
           echo "  Total resources: 24"
           echo "  Classes included: 6"
@@ -484,6 +485,7 @@ jobs:
           echo "Agent version: 8.4.0"
           echo "Run mode: apply"
           echo ""
+          sleep 1
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📦 Applying Resources"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -491,6 +493,7 @@ jobs:
           echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Namespace[hackers-org-p4-prod]"
           echo "  ✓ Namespace 'hackers-org-p4-prod' is in sync"
           echo ""
+          sleep 2
           echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Deployment[hackers-organized]"
           echo "  ✓ Updating deployment 'hackers-organized'"
           echo "    • Image: ${{ vars.DOCKER_USER }}/hackers-organized:${{ cloudbees.scm.sha }}"
@@ -498,16 +501,19 @@ jobs:
           echo "    • Strategy: RollingUpdate"
           echo "  ✓ Deployment updated successfully"
           echo ""
+          sleep 2
           echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Service[hackers-org-p4-service]"
           echo "  ✓ Service 'hackers-org-p4-service' configured"
           echo "    • Type: LoadBalancer"
           echo "    • Port: 80 -> 3000"
           echo ""
+          sleep 1
           echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Ingress[hackers-org-p4-ingress]"
           echo "  ✓ Ingress rules updated"
           echo "    • Host: hackers-org-p4.hackers-org-p4-prod.preview.cb-demos.io"
           echo "    • TLS: enabled"
           echo ""
+          sleep 1
           echo "Notice: /Stage[main]/Hackers_org_p4::Config/Kubernetes::Configmap[app-config]"
           echo "  ✓ ConfigMap synchronized"
           echo "    • FM_INSTANCE: demo1.cloudbees.io"
@@ -516,6 +522,7 @@ jobs:
           echo "Notice: /Stage[main]/Hackers_org_p4::Config/Kubernetes::Secret[app-secrets]"
           echo "  ✓ Secrets updated (values redacted)"
           echo ""
+          sleep 2
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📊 Puppet Run Summary"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
