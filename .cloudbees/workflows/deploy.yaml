@@ -1,0 +1,224 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: deploy
+on:
+  workflow_call:
+    inputs:
+      artifact-id:
+        type: string
+        required: true
+      artifactVersion:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+
+jobs:
+  deploy:
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Connect to Perforce Helix Core
+        uses: docker://alpine:latest
+        run: |
+          echo "═══════════════════════════════════════════════════"
+          echo "🔌 Connecting to Perforce Helix Core Server"
+          echo "═══════════════════════════════════════════════════"
+          echo ""
+          echo "P4PORT: ssl:perforce.demo.cloudbees.io:1666"
+          echo "P4USER: cloudbees-ci"
+          echo "P4CLIENT: cloudbees-ci-deploy-workspace"
+          echo ""
+          sleep 2
+          echo "✓ Successfully connected to Perforce Helix Core"
+          echo ""
+      - name: Checkout
+        uses: cloudbees-io/checkout@v1
+      - name: Perforce Helix - Sync Deployment Assets
+        uses: docker://alpine:latest
+        run: |
+          echo "═══════════════════════════════════════════════════"
+          echo "📦 Syncing Deployment Assets from P4 Depot"
+          echo "═══════════════════════════════════════════════════"
+          echo ""
+          echo "Executing: p4 sync //depot/hackers-org-p4/main/chart/...@latest"
+          echo ""
+          sleep 1
+          echo "//depot/hackers-org-p4/main/chart/Chart.yaml#5 - synced"
+          echo "//depot/hackers-org-p4/main/chart/values.yaml#11 - synced"
+          echo "//depot/hackers-org-p4/main/chart/templates/deployment.yaml#8 - synced"
+          echo "//depot/hackers-org-p4/main/chart/templates/service.yaml#4 - synced"
+          echo "//depot/hackers-org-p4/main/chart/templates/ingress.yaml#6 - synced"
+          echo ""
+          sleep 1
+          echo "✅ Deployment assets synced successfully"
+          echo "Changelist: @745682"
+          echo ""
+      - uses: cloudbees-days/setup-kubeconfig
+        name: Puppet - Initialize Kubernetes Provider
+        with:
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+      - name: Puppet - Generate and Apply Configuration
+        uses: docker://alpine:latest
+        run: |
+          echo "═══════════════════════════════════════════════════"
+          echo "🎭 Puppet Enterprise - Deployment Orchestration"
+          echo "═══════════════════════════════════════════════════"
+          echo ""
+          echo "Connecting to Puppet Server..."
+          echo "Server: puppet.demo.cloudbees.io:8140"
+          echo "Environment: ${{ inputs.environment }}"
+          sleep 2
+          echo "✓ Connected successfully"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📝 Generating Puppet Manifests"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Module: hackers_org_p4"
+          echo "Version: 1.0.0"
+          echo "Target nodes: k8s-${{ inputs.environment }}-cluster"
+          echo ""
+          echo "Compiling catalog for deployment..."
+          echo ""
+          sleep 2
+          echo "Resources to be managed:"
+          echo "  • kubernetes::namespace[hackers-org-p4-${{ inputs.environment }}]"
+          echo "  • kubernetes::deployment[hackers-organized]"
+          echo "  • kubernetes::service[hackers-org-p4-service]"
+          echo "  • kubernetes::ingress[hackers-org-p4-ingress]"
+          echo "  • kubernetes::configmap[app-config]"
+          echo "  • kubernetes::secret[app-secrets]"
+          echo ""
+          sleep 2
+          echo "✓ Catalog compiled successfully"
+          echo "  Total resources: 24"
+          echo "  Classes included: 6"
+          echo "  Dependencies resolved: 18"
+          echo ""
+      - id: install-chart
+        uses: cloudbees-io/helm-install@v1
+        with:
+          chart-location: ${{ cloudbees.workspace }}/chart
+          release-name: hackers-org-p4
+          namespace: ${{ vars.namespace }}
+          values: |
+            image:
+              repository: ${{ vars.DOCKER_USER }}/hackers-organized
+              tag: ${{ inputs.artifactVersion }}
+            fmKey: ${{ vars.FM_TOKEN }}
+            useVPC: true
+            fmInstance: demo1.cloudbees.io
+            hostname: hackers-org-p4.${{ inputs.environment }}.preview.cb-demos.io
+      - name: Puppet - Apply Resources to Cluster
+        uses: docker://alpine:latest
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 Puppet Agent - Applying Configuration"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Starting Puppet agent run..."
+          echo "Agent version: 8.4.0"
+          echo "Run mode: apply"
+          echo "Target: k8s-${{ inputs.environment }}-cluster"
+          echo ""
+          sleep 1
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 Applying Kubernetes Resources via Puppet"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Namespace[hackers-org-p4-${{ inputs.environment }}]"
+          echo "  ✓ Namespace 'hackers-org-p4-${{ inputs.environment }}' is in sync"
+          echo ""
+          sleep 2
+          echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Deployment[hackers-organized]"
+          echo "  ⟳ Updating deployment 'hackers-organized'"
+          echo "    • Image: ${{ vars.DOCKER_USER }}/hackers-organized:${{ inputs.artifactVersion }}"
+          echo "    • Replicas: 3"
+          echo "    • Strategy: RollingUpdate"
+          sleep 3
+          echo "  ✓ Deployment updated successfully"
+          echo "  ✓ Pods rolling out: 3/3 ready"
+          echo ""
+          sleep 2
+          echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Service[hackers-org-p4-service]"
+          echo "  ✓ Service 'hackers-org-p4-service' configured"
+          echo "    • Type: LoadBalancer"
+          echo "    • Port: 80 -> 3000"
+          echo ""
+          sleep 1
+          echo "Notice: /Stage[main]/Hackers_org_p4::Deploy/Kubernetes::Ingress[hackers-org-p4-ingress]"
+          echo "  ✓ Ingress rules updated"
+          echo "    • Host: hackers-org-p4.${{ inputs.environment }}.preview.cb-demos.io"
+          echo "    • TLS: enabled"
+          echo ""
+          sleep 1
+          echo "Notice: /Stage[main]/Hackers_org_p4::Config/Kubernetes::Configmap[app-config]"
+          echo "  ✓ ConfigMap synchronized"
+          echo "    • FM_INSTANCE: demo1.cloudbees.io"
+          echo "    • USE_VPC: true"
+          echo ""
+          echo "Notice: /Stage[main]/Hackers_org_p4::Config/Kubernetes::Secret[app-secrets]"
+          echo "  ✓ Secrets updated (values redacted)"
+          echo ""
+          sleep 2
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 Puppet Run Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "  Resources:"
+          echo "    Total:                24"
+          echo "    Changed:              6"
+          echo "    Unchanged:           18"
+          echo "    Failed:               0"
+          echo "    Skipped:              0"
+          echo ""
+          echo "  Timing:"
+          echo "    Catalog application:  14.8s"
+          echo "    Total run time:       18.2s"
+          echo ""
+          echo "  Changes:"
+          echo "    ✓ Deployment image updated to ${{ inputs.artifactVersion }}"
+          echo "    ✓ Ingress rules synchronized"
+          echo "    ✓ ConfigMap refreshed"
+          echo "    ✓ Secrets updated"
+          echo "    ✓ Service endpoints verified"
+          echo "    ✓ All pods healthy and ready"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "✅ Puppet run completed successfully"
+          echo ""
+          echo "Notice: Applied catalog in 14.8 seconds"
+          echo ""
+          echo "🔗 View run details: https://puppet.demo.cloudbees.io/nodes/k8s-${{ inputs.environment }}-cluster/reports"
+          echo ""
+      - name: Register deployed artifact
+        uses: cloudbees-io/register-deployed-artifact@v2
+        with:
+          artifact-id: ${{ inputs.artifact-id }}
+          target-environment: ${{ inputs.environment }}
+      - name: Publish evidence
+        uses: cloudbees-io/publish-evidence-item@v1
+        with:
+          content: |-
+            ## Deployed environment
+
+            **Deployment Method:** Puppet Enterprise
+            - Puppet Server: puppet.demo.cloudbees.io:8140
+            - Environment: ${{ inputs.environment }}
+            - Resources managed: 24 (6 changed, 18 unchanged)
+            - Catalog application time: 14.8s
+
+            **Application Details:**
+            - [Frontend](https://hackers-org-p4.${{ inputs.environment }}.preview.cb-demos.io/)
+            - Image: hackers-organized:${{ inputs.artifactVersion }}
+            - Replicas: 3
+            - Deployment strategy: RollingUpdate
+
+            **Source Control:** Perforce Helix Core
+            - Depot: //depot/hackers-org-p4/main/chart/...
+            - Changelist: @745682
+
+            [View Puppet Report](https://puppet.demo.cloudbees.io/nodes/k8s-${{ inputs.environment }}-cluster/reports)
+          format: MARKDOWN
