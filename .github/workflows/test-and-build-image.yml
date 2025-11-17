@@ -33,3 +33,4 @@ jobs:
         with:
           test-type: junit
           results-path: junit.xml
+          cloudbees-url: "https://api.demo1.cloudbees.io"
